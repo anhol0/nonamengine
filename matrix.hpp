@@ -9,70 +9,71 @@ class Matrix {
     public:
         int rows, cols;
         Matrix(int r, int c): 
-            rows(r), cols(c), data(rows, std::vector<float>(cols, 0.0f)) {}
-        std::vector<float>& operator[](size_t row) {
-            return data[row]; 
+            rows(r), cols(c), data(rows * cols, 0.0f) {}
+        float* operator[](size_t row) {
+            return &data[row*cols]; 
         }
-        const std::vector<float>& operator[](size_t row) const {
-            return data[row];
+        const float* operator[](size_t row) const {
+            return &data[row*cols];
         }
-        const Matrix operator*(const Matrix &m) const {
-            if (cols != m.rows) {
-                throw std::invalid_argument("Invalid matrix dimensions");
-            }
-            Matrix out(rows, m.cols);
-            for(int row = 0; row < out.rows; row++) {
-                for(int col = 0; col < out.cols; col++) {
-                    for(int i = 0; i < cols; i++) {
-                        out[row][col] += data[row][i] * m[i][col];
-                    }
-                }
-            }
-            return out;
-        }
-        Matrix operator*(float scalar) const {
-            Matrix out(rows, cols);
-            for(int i = 0; i < rows; i++) {
-                for(int j = 0; j < cols; j++) {
-                    out[i][j] = data[i][j] * scalar;
-                }
-            }
-            return out;
-        }
-        Matrix operator-(const Matrix &m) const {
-            Matrix out(rows, cols);
-            for(int i = 0; i < rows; i++) {
-                for(int j = 0; j < cols; j++) {
-                    out[i][j] = data[i][j] - m[i][j];
-                }
-            }
-            return out;
-        }
-        const Matrix operator+(const Matrix &m) const {
-            if(cols != m.cols || rows != m.rows) {
-                throw std::invalid_argument("Invalid matrix dimensions");
-            }
-            Matrix out(rows, cols);
-            for(int i = 0; i < out.rows; i++) {
-                for(int j = 0; j < out.cols; j++) {
-                    out[i][j] = data[i][j] + m[i][j];
-                }
-            }
-            return out;
-        }
+        const Matrix operator*(const Matrix &m) const;
+        Matrix operator*(float scalar) const; 
+        Matrix operator-(const Matrix &m) const; 
+        Matrix operator+(const Matrix &m) const; 
     private:
         // row - column design 
-        std::vector<std::vector<float>> data;
+        std::vector<float> data;
 };
 
-inline Matrix subtract(const Matrix &m1, const Matrix &m2) {
-    if(m1.cols != m2.cols || m1.rows != m2.rows) {
+inline const Matrix Matrix::operator*(const Matrix &m) const {
+    if (cols != m.rows) {
         throw std::invalid_argument("Invalid matrix dimensions");
     }
-    Matrix out(m1.rows, m1.cols);
-    for(int i = 0; i < out.rows; i++) {
-        for(int j = 0; j < out.cols; j++) {
-            out[i][j] = m1[i][j] - m2[i][j];
+    Matrix out(rows, m.cols);
+    for(size_t row = 0; row < out.rows; row++) {
+        const float* row_a = (*this)[row];
+        for(size_t col = 0; col < out.cols; col++) {
+            float sum = 0.0f;
+            for(size_t i = 0; i < cols; i++) {
+                 sum += (*this)[row][i] * m[i][col];
+            }
+            out[row][col] += sum;
+        }
+    }
+    return out;
+}
+
+inline Matrix Matrix::operator*(float scalar) const {
+    Matrix out(rows, cols);
+    for(size_t i = 0; i < rows; i++) {
+        for(size_t j = 0; j < cols; j++) {
+            out[i][j] = (*this)[i][j] * scalar;
+        }
+    }
+    return out;
+}
+
+inline Matrix Matrix::operator-(const Matrix &m) const {
+    if(cols != m.cols || rows != m.rows) {
+        throw std::invalid_argument("Invalid matrix dimensions");
+    }
+    Matrix out(rows, cols);
+    for(size_t i = 0; i < rows; i++) {
+        for(size_t j = 0; j < cols; j++) {
+            out[i][j] = (*this)[i][j] - m[i][j];
+        }
+    }
+    return out;
+}
+
+inline Matrix Matrix::operator+(const Matrix &m) const {
+    if(cols != m.cols || rows != m.rows) {
+        throw std::invalid_argument("Invalid matrix dimensions");
+    }
+    Matrix out(rows, cols);
+    for(size_t i = 0; i < out.rows; i++) {
+        for(size_t j = 0; j < out.cols; j++) {
+            out[i][j] = (*this)[i][j] + m[i][j];
         }
     }
     return out;
@@ -81,8 +82,8 @@ inline Matrix subtract(const Matrix &m1, const Matrix &m2) {
 inline Matrix relu(const Matrix &m) {
     Matrix out(m.rows, m.cols);
 
-    for(int i = 0; i < m.rows; i++) {
-        for(int j = 0; j < m.cols; j++) {
+    for(size_t i = 0; i < m.rows; i++) {
+        for(size_t j = 0; j < m.cols; j++) {
             out[i][j] = std::max(0.0f, m[i][j]);
         }
     }
@@ -91,8 +92,8 @@ inline Matrix relu(const Matrix &m) {
 
 inline Matrix transpose(const Matrix &m) {
     Matrix out(m.cols, m.rows);
-    for(int i = 0; i < m.rows; i++) {
-        for(int j = 0; j < m.cols; j++) {
+    for(size_t i = 0; i < m.rows; i++) {
+        for(size_t j = 0; j < m.cols; j++) {
             out[j][i] = m[i][j];
         }
     }
