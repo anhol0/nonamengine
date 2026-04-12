@@ -3,19 +3,6 @@
 #include <cstdlib>
 #include <iostream>
 
-void print_matrix(const Matrix &m) {
-    for(int i = 0; i < m.rows; i++) {
-        for(int j = 0; j < m.cols; j++) {
-            std::cout << m[i][j] << ", ";
-        }
-        std::cout << "\n";
-    }
-}
-
-float randf() {
-    return (float)rand() / RAND_MAX;
-}
-
 int main() {
     float lr = 1e-3; 
     Matrix weights(1, 3);
@@ -27,6 +14,7 @@ int main() {
     }
     biases[0][0] = 0.0f;
     Matrix x(3, 1);
+    Dense dlayer(3, 1);
     for(int i = 0; i < 300000; i++) {
         x[0][0] = rand()%10;
         x[1][0] = rand()%10;
@@ -34,22 +22,23 @@ int main() {
 
         Matrix target(1, 1);
         target[0][0] = x[0][0] + x[1][0]+x[2][0];
-        Matrix pred = layer(x, weights, biases);
-        float l = loss(pred, target);
-        BackpropResult grads = backprop(x, weights, target, pred, biases);
-        weights = weights - (grads.grad_weights * lr);
-        biases = biases - (grads.grad_biases * lr);
-
-        if(i % 100 == 0) {
-            std::cout << "loss: " << l << "\n";
+        Matrix pred = dlayer.forward(x);
+        
+        Matrix delta(pred.rows, pred.cols);
+        for(size_t i = 0; i < delta.rows; i++) {
+            for(size_t j = 0; j < delta.cols; j++) {
+                delta[i][j] = 2 * (pred[i][j] - target[i][j]);
+            }
         }
+        dlayer.backward(delta, lr);
     }
-    Matrix y = layer(x, weights, biases);
+
+    Matrix y = dlayer.forward(x);
     std::cout << x[0][0] << " + " << x[1][0] << " + " << x[2][0] << " = " << y[0][0] << std::endl;
     Matrix n(3, 1);
     n[0][0] = 2;
     n[1][0] = 60;
     n[2][0] = 15;
-    Matrix z = layer(n, weights, biases);
+    Matrix z = dlayer.forward(n);
     std::cout << n[0][0] << " + " << n[1][0] << " + " << n[2][0] << " = " << z[0][0] << std::endl;
 }

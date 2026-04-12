@@ -79,17 +79,6 @@ inline Matrix Matrix::operator+(const Matrix &m) const {
     return out;
 }
 
-inline Matrix relu(const Matrix &m) {
-    Matrix out(m.rows, m.cols);
-
-    for(size_t i = 0; i < m.rows; i++) {
-        for(size_t j = 0; j < m.cols; j++) {
-            out[i][j] = std::max(0.0f, m[i][j]);
-        }
-    }
-    return out;
-}
-
 inline Matrix transpose(const Matrix &m) {
     Matrix out(m.cols, m.rows);
     for(size_t i = 0; i < m.rows; i++) {
