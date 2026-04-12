@@ -3,10 +3,11 @@
 
 #include "matrix.hpp"
 #include <iostream>
+#include <cmath>
 
 inline void print_matrix(const Matrix &m) {
-    for(int i = 0; i < m.rows; i++) {
-        for(int j = 0; j < m.cols; j++) {
+    for(size_t i = 0; i < m.rows; i++) {
+        for(size_t j = 0; j < m.cols; j++) {
             std::cout << m[i][j] << ", ";
         }
         std::cout << "\n";

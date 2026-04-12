@@ -7,8 +7,9 @@
 
 class Matrix {
     public:
-        int rows, cols;
-        Matrix(int r, int c): 
+        size_t rows, cols;
+        Matrix() {}
+        Matrix(size_t r, size_t c): 
             rows(r), cols(c), data(rows * cols, 0.0f) {}
         float* operator[](size_t row) {
             return &data[row*cols]; 
@@ -35,7 +36,7 @@ inline const Matrix Matrix::operator*(const Matrix &m) const {
         for(size_t col = 0; col < out.cols; col++) {
             float sum = 0.0f;
             for(size_t i = 0; i < cols; i++) {
-                 sum += (*this)[row][i] * m[i][col];
+                 sum += row_a[i] * m[i][col];
             }
             out[row][col] += sum;
         }
@@ -74,6 +75,17 @@ inline Matrix Matrix::operator+(const Matrix &m) const {
     for(size_t i = 0; i < out.rows; i++) {
         for(size_t j = 0; j < out.cols; j++) {
             out[i][j] = (*this)[i][j] + m[i][j];
+        }
+    }
+    return out;
+}
+
+inline Matrix relu(const Matrix &m) {
+    Matrix out(m.rows, m.cols);
+
+    for(size_t i = 0; i < m.rows; i++) {
+        for(size_t j = 0; j < m.cols; j++) {
+            out[i][j] = std::max(0.0f, m[i][j]);
         }
     }
     return out;

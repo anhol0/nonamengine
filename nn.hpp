@@ -9,18 +9,18 @@ public:
     Matrix weights, biases;
     Matrix input_cache;
 
-    Dense(int in_features, int out_features): 
+    Dense(size_t in_features, size_t out_features): 
         weights(out_features, in_features), 
         biases(out_features, 1), 
-        input_cache(in_features, 0) 
+        input_cache(in_features, 1) 
     {
-        for(int i = 0; i < weights.rows; i++) {
-            for(int j = 0; j < weights.cols; j++) {
+        for(size_t i = 0; i < weights.rows; i++) {
+            for(size_t j = 0; j < weights.cols; j++) {
                 weights[i][j] = (randf() * 2.0f - 1.0f)* 0.1f;
             }
         } 
-        for(int i = 0; i < biases.rows; i++) {
-            for(int j = 0; j < biases.cols; j++) {
+        for(size_t i = 0; i < biases.rows; i++) {
+            for(size_t j = 0; j < biases.cols; j++) {
                 biases[i][j] = 0.0f;
             }
         }
@@ -47,6 +47,24 @@ public:
 
         return grad_inputs;
 
+    }
+};
+
+class ReLU {
+public:
+    Matrix cache;
+    Matrix forward(const Matrix &input) {
+        cache = input;
+        return relu(input);
+    }
+    Matrix backward(const Matrix &grad_output) {
+        Matrix grad(cache.rows, cache.cols);
+        for(size_t i = 0; i < cache.rows; i++) {
+            for(size_t j = 0; j < cache.cols; j++) {
+                grad[i][j] = cache[i][j] > 0 ? grad_output[i][j] : 0.0f;
+            }
+        }
+        return grad;
     }
 };
 
