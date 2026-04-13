@@ -1,6 +1,6 @@
 #include "matrix.hpp"
 #include "nn.hpp"
-#include "utility.hpp"
+#include "model.hpp"
 #include <cstdlib>
 #include <iostream>
 
@@ -8,11 +8,12 @@ int main() {
     float lr = 1e-3;  
 
     Matrix x(2,1);
-    Dense dlayer(2, 2);
-    Dense dlayer2(2, 1);
-    ReLU re;
-    for(int i = 0; i < 1000000; i++) {
-        int r = i % 4;
+    Model model;
+    model.add_layer<Dense>(2, 4);
+    model.add_layer<ReLU>();
+    model.add_layer<Dense>(4, 1);
+    for(int i = 0; i < 100000; i++) {
+        int r = rand() % 4;
 
         Matrix target(1,1);
         if(r == 0) { x[0][0] = 0; x[1][0] = 0; target[0][0] = 0; }
@@ -21,30 +22,27 @@ int main() {
         if(r == 3) { x[0][0] = 1; x[1][0] = 1; target[0][0] = 0; }        
         
         // Matrix of predictions
-        Matrix pred = dlayer.forward(x);
-        Matrix pred_act = re.forward(pred);
-        Matrix out = dlayer2.forward(pred_act);
+        Matrix out = model.forward(x);
 
         // Loss gradient
-        Matrix delta(out.rows, out.cols);
-        for(size_t i = 0; i < delta.rows; i++) {
-            for(size_t j = 0; j < delta.cols; j++) {
-                delta[i][j] = 2 * (out[i][j] - target[i][j]);
-            }
-        }
+        Matrix delta = model.gradient(out, target);
 
-        // Backpropagating 
-        Matrix grad_act = dlayer2.backward(delta, lr);
-        Matrix grad = re.backward(grad_act);
-        dlayer.backward(grad, lr);
+        // Backpropagating  
+        model.backward(delta);
+
+        // Updating weights and biases on all layers
+        model.update(lr);
     }
-   
-    Matrix y = dlayer2.forward(re.forward(dlayer.forward(x)));
-    // std::cout << "size(row x col): " << y.rows << " x " << y.cols << "\n";
-    std::cout << x[0][0] << "^" << x[1][0] << " = " << y[0][0] << std::endl;
-    Matrix n(2, 1);
-    n[0][0] = 1;
-    n[1][0] = 0;
-    Matrix z = dlayer2.forward(re.forward(dlayer.forward(n)));
-    std::cout << n[0][0] << "^" << n[1][0] << " = " << z[0][0] << std::endl;
+
+    // Testing
+    for(int a = 0; a < 2; a++) {
+        for(int b = 0; b < 2; b++) {
+            Matrix t(2,1);
+            t[0][0] = a;
+            t[1][0] = b;
+
+            Matrix o = model.forward(t); 
+            std::cout << a << "^" << b << " = " << o[0][0] << "\n";
+        }
+    }
 }

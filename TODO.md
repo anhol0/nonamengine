@@ -1,3 +1,5 @@
 * ~~Refactor matrix to be flat and calculate offsets manually <s: 15:05 04.11.2026> <e: 15:49 04.11.2026>~~ (status: completed)
-* ~~Add backpropagarion with respect to input for multi-layering~~ <s: 15:54 04.11.2026> <e: 16:48 04.11.2026> (status: paused/completed) 
+* ~~Add backpropagarion with respect to input for multi-layering <s: 15:54 04.11.2026> <e: 16:48 04.11.2026>~~ (status: paused/completed) 
 * ~~Add layer class <s: 16:48 04.11.2026> <e: 13:42 04.12.2026>~~ (status: completed)
+* ~~Make a generic layer class that will have children Dense and ReLU for generalization and easy stacking <s: 17:00 04.11.2026> <e: 22:59 4.12.2026>~~ (status: completed)
+* ~~Make a Model class that will generalize operation of the Neural Network model <s: 22:59 4.12.2026> <e: 13:48 4.13.2026>~~ (status: completed)
