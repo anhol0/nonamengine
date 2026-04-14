@@ -1,48 +1,64 @@
 #include "matrix.hpp"
 #include "nn.hpp"
 #include "model.hpp"
-#include <cstdlib>
+#include <cmath>
 #include <iostream>
+
+#define ITERATIONS 2000000
 
 int main() {
     float lr = 1e-3;  
-
     Matrix x(2,1);
     Model model;
-    model.add_layer<Dense>(2, 4);
+    MSELoss loss;
+    float l;
+    model.add_layer<Dense>(2, 64);
     model.add_layer<ReLU>();
-    model.add_layer<Dense>(4, 1);
-    for(int i = 0; i < 100000; i++) {
-        int r = rand() % 4;
-
+    model.add_layer<Dense>(64, 1);
+    for(int i = 0; i < ITERATIONS; i++) {
+        // Target data
         Matrix target(1,1);
-        if(r == 0) { x[0][0] = 0; x[1][0] = 0; target[0][0] = 0; }
-        if(r == 1) { x[0][0] = 0; x[1][0] = 1; target[0][0] = 1; }
-        if(r == 2) { x[0][0] = 1; x[1][0] = 0; target[0][0] = 1; }
-        if(r == 3) { x[0][0] = 1; x[1][0] = 1; target[0][0] = 0; }        
-        
+
+        // Training data
+        x[0][0] = (rand() % 20)/ 19.f;
+        x[1][0] = (rand() % 20) / 19.f;
+        target[0][0] = (x[0][0] * x[1][0]);
+
         // Matrix of predictions
         Matrix out = model.forward(x);
 
         // Loss gradient
-        Matrix delta = model.gradient(out, target);
+        l = loss.forward(out, target);
+        Matrix delta = loss.backward(out, target);
 
-        // Backpropagating  
+       // Backpropagating  
         model.backward(delta);
 
         // Updating weights and biases on all layers
         model.update(lr);
-    }
+        if(i % 10000 == 0) {
+            std::cout << "loss = " << l << "\n";
+            std::cout << ((float)i / (float)ITERATIONS) * 100.f << "%\n";
+            std::cout << "\033[H\033[J";
+        } 
+    }   
 
     // Testing
-    for(int a = 0; a < 2; a++) {
-        for(int b = 0; b < 2; b++) {
+    for(int a = 0; a < 10; a++) {
+        for(int b = 0; b < 10; b++) {
             Matrix t(2,1);
-            t[0][0] = a;
-            t[1][0] = b;
+            t[0][0] = a / 19.f;
+            t[1][0] = b / 19.f;
 
             Matrix o = model.forward(t); 
-            std::cout << a << "^" << b << " = " << o[0][0] << "\n";
+            std::cout << a << "*" << b << " = " << o[0][0] * 19.f*19.f << "\n";
         }
     }
+
+    Matrix t(2,1);
+    t[0][0] = 11.f / 19.f;
+    t[1][0] = 11.f / 19.f;
+
+    Matrix o = model.forward(t); 
+    std::cout << 11 << "*" << 11 << " = " << o[0][0] * 19.f*19.f << "\n";
 }

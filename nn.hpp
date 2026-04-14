@@ -91,4 +91,35 @@ inline Matrix ReLU::backward(const Matrix &grad_output) {
     }
     return grad;
 }
+
+class MSELoss {
+public:
+    float forward(const Matrix &pred, const Matrix &target);
+    Matrix backward(const Matrix &pred, const Matrix &target);
+};
+
+inline float MSELoss::forward(const Matrix &pred, const Matrix &target) {
+    float sum = 0.f;
+    int N = pred.rows * pred.cols;
+    for(size_t i = 0; i < pred.rows; i++) {
+       for(size_t j = 0; j < pred.rows; j++) {
+            sum += std::pow((pred[i][j] - target[i][j]), 2);
+       } 
+    }
+    return sum / N;
+}
+
+inline Matrix MSELoss::backward(const Matrix &pred, const Matrix &target) {
+    if(pred.cols != target.cols || pred.rows != target.rows) {
+        throw std::invalid_argument("Invalid matrix dimensions");
+    }
+    Matrix delta(pred.rows, pred.cols);
+    for(size_t i = 0; i < delta.rows; i++) {
+        for(size_t j = 0; j < delta.cols; j++) {
+            delta[i][j] = 2 * (pred[i][j] - target[i][j]);
+        }
+    }
+    return delta;
+}
+
 #endif

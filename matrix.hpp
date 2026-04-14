@@ -3,7 +3,6 @@
 
 #include <vector>
 #include <stdexcept>
-#include <algorithm>
 
 class Matrix {
     public:

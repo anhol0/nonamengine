@@ -13,7 +13,6 @@ public:
     template<typename T, typename... Args>
     void add_layer(Args&& ...args);
     Matrix forward(const Matrix &m);
-    Matrix gradient(const Matrix &pred, const Matrix& target);
     void backward(const Matrix &grad);
     void update(float lr);
 };
@@ -29,20 +28,6 @@ inline Matrix Model::forward(const Matrix &m) {
         pred = e->forward(pred);
     }
     return pred;
-}
-
-inline Matrix Model::gradient(const Matrix &pred, const Matrix &target) {
-    if(pred.cols != target.cols || pred.rows != target.rows) {
-        throw std::invalid_argument("Invalid matrix dimensions");
-    }
-
-    Matrix delta(pred.rows, pred.cols);
-    for(size_t i = 0; i < delta.rows; i++) {
-        for(size_t j = 0; j < delta.cols; j++) {
-            delta[i][j] = 2 * (pred[i][j] - target[i][j]);
-        }
-    }
-    return delta;
 }
 
 inline void Model::backward(const Matrix &grad) {
