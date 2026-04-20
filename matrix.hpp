@@ -17,7 +17,8 @@ class Matrix {
             return &data[row*cols];
         }
         const Matrix operator*(const Matrix &m) const;
-        Matrix operator*(float scalar) const; 
+        Matrix operator*(float scalar) const;
+        Matrix operator/(float scalar) const;
         Matrix operator-(const Matrix &m) const; 
         Matrix operator+(const Matrix &m) const; 
     private:
@@ -37,7 +38,7 @@ inline const Matrix Matrix::operator*(const Matrix &m) const {
             for(size_t i = 0; i < cols; i++) {
                  sum += row_a[i] * m[i][col];
             }
-            out[row][col] += sum;
+            out[row][col] = sum;
         }
     }
     return out;
@@ -53,6 +54,15 @@ inline Matrix Matrix::operator*(float scalar) const {
     return out;
 }
 
+inline Matrix Matrix::operator/(float scalar) const {
+    Matrix out(rows, cols);
+    for(size_t i = 0; i < rows; i++) {
+        for(size_t j = 0; j < cols; j++) {
+            out[i][j] = (*this)[i][j] / scalar;
+        }
+    }
+    return out;
+}
 inline Matrix Matrix::operator-(const Matrix &m) const {
     if(cols != m.cols || rows != m.rows) {
         throw std::invalid_argument("Invalid matrix dimensions");
@@ -100,4 +110,31 @@ inline Matrix transpose(const Matrix &m) {
     return out;
 }
 
+inline Matrix broadcast_cols(const Matrix &m, int new_cols) {
+    if(m.cols != 1) {
+        throw std::invalid_argument("Broadcasting matrix columns is supported on only Ax1 matrices");
+    }
+    Matrix out(m.rows, new_cols);
+    for(size_t i = 0; i < out.rows; i++) {
+        float v = m[i][0];
+        for(size_t j = 0; j < out.cols; j++) {
+            out[i][j] = v;
+        }
+    }
+    return out;
+}
+
+inline Matrix broadcast_rows(const Matrix &m, int new_rows) {
+    if(m.rows != 1) {
+        throw std::invalid_argument("Broadcasting matrix rows is supported on only 1xA matrices");
+    }
+    Matrix out(new_rows, m.cols);
+    const float *m_r = m[0];
+    for(size_t i = 0; i < out.rows; i++) {
+        for(size_t j = 0; j < out.cols; j++) {
+            out[i][j] = m_r[j];
+        }
+    }
+    return out;   
+}
 #endif

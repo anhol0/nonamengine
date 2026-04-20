@@ -2,6 +2,8 @@
 #define UTILITY_HPP
 
 #include "matrix.hpp"
+#include <cstdlib>
+#include <ctime>
 #include <iostream>
 #include <cmath>
 
@@ -15,6 +17,7 @@ inline void print_matrix(const Matrix &m) {
 }
 
 inline float randf() {
+    srand(time(NULL));
     return (float)rand() / RAND_MAX;
 }
 
