@@ -14,17 +14,22 @@ int main() {
     MSELoss loss;
     float l;
 
-    model.add_layer<Dense>(1, 16);
+    model.add_layer<Dense>(2, 32);
     model.add_layer<ReLU>();
-    model.add_layer<Dense>(16, 1);
+    model.add_layer<Dense>(32, 1);
     size_t batch_size = 1000;
-    Matrix x(1,batch_size);
+    Matrix x(2,batch_size);
     Matrix target(1,batch_size);
+
     for(size_t k = 0; k < batch_size; k++) {
-        float v = randf() * 2.0f - 1.0f;
-        x[0][k] = v;
-        target[0][k] = v * v;
+        float a = randf() * 2.0f - 1.0f;
+        float b = randf() * 2.0f - 1.0f;
+
+        x[0][k] = a;
+        x[1][k] = b;
+        target[0][k] = a * b;
     }
+
     for(int i = 0; i < ITERATIONS; i++) {
         // Matrix of predictions
         Matrix out = model.forward(x);
@@ -46,8 +51,9 @@ int main() {
     }
 
     // Testing
-    Matrix test(1, 1);
-    test[0][0] = 0.5;
+    Matrix test(2, 1);
+    test[0][0] = 0.25;
+    test[1][0] = 0.11;
     Matrix out = model.forward(test);
-    std::cout << "0.5 ^ 2 = " << out[0][0] << std::endl;
+    std::cout << test[0][0] << " * " << test[1][0] << " = " << out[0][0] << std::endl;
 }

@@ -3,6 +3,7 @@
 #include <ctime>
 #include <iostream>
 #include <cmath>
+#include <random>
 
 void print_matrix(const Matrix &m) {
     for(size_t i = 0; i < m.rows; i++) {
@@ -14,6 +15,8 @@ void print_matrix(const Matrix &m) {
 }
 
 float randf() {
-    srand(time(NULL));
-    return (float)rand() / RAND_MAX;
+    std::random_device rand;
+    std::mt19937 gen(rand());
+    std::uniform_real_distribution<> res(0.f, 1.f);
+    return res(gen);
 }

@@ -8,7 +8,7 @@ Dense::Dense(size_t in_features, size_t out_features):
     weights(out_features, in_features),
     biases(out_features, 1)
 {
-    float scale = std::sqrt(1 / in_features);
+    float scale = std::sqrt(1 / static_cast<float>(in_features));
     for(size_t i = 0; i < weights.rows; i++) {
         for(size_t j = 0; j < weights.cols; j++) {
             weights[i][j] = (randf() * 2.0f - 1.0f) * scale;
@@ -27,8 +27,7 @@ Matrix Dense::forward(const Matrix &input) {
 }
 
 Matrix Dense::backward(const Matrix &grad_output) {
-    Matrix inputs_T = transpose(input_cache);
-    grad_weights = (grad_output * inputs_T) / grad_output.cols;
+    grad_weights = grad_output * transpose(input_cache);
 
     grad_biases = Matrix(biases.rows, biases.cols);
     for(size_t i = 0; i < grad_output.rows; i++) {
@@ -36,7 +35,7 @@ Matrix Dense::backward(const Matrix &grad_output) {
         for(size_t j = 0; j < grad_output.cols; j++) {
             sum += grad_output[i][j];
         }
-        grad_biases[i][0] = sum / grad_output.cols;
+        grad_biases[i][0] = sum;
     }
     Matrix grad_inputs = transpose(weights) * grad_output;
 
