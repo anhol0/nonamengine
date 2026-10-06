@@ -1,32 +1,7 @@
-#ifndef MATRIX_HPP
-#define MATRIX_HPP
-
-#include <vector>
+#include "include/matrix.hpp"
 #include <stdexcept>
 
-class Matrix {
-    public:
-        size_t rows, cols;
-        Matrix() {}
-        Matrix(size_t r, size_t c): 
-            rows(r), cols(c), data(rows * cols, 0.0f) {}
-        float* operator[](size_t row) {
-            return &data[row*cols]; 
-        }
-        const float* operator[](size_t row) const {
-            return &data[row*cols];
-        }
-        const Matrix operator*(const Matrix &m) const;
-        Matrix operator*(float scalar) const;
-        Matrix operator/(float scalar) const;
-        Matrix operator-(const Matrix &m) const; 
-        Matrix operator+(const Matrix &m) const; 
-    private:
-        // row - column design 
-        std::vector<float> data;
-};
-
-inline const Matrix Matrix::operator*(const Matrix &m) const {
+const Matrix Matrix::operator*(const Matrix &m) const {
     if (cols != m.rows) {
         throw std::invalid_argument("Invalid matrix dimensions");
     }
@@ -44,7 +19,7 @@ inline const Matrix Matrix::operator*(const Matrix &m) const {
     return out;
 }
 
-inline Matrix Matrix::operator*(float scalar) const {
+Matrix Matrix::operator*(float scalar) const {
     Matrix out(rows, cols);
     for(size_t i = 0; i < rows; i++) {
         for(size_t j = 0; j < cols; j++) {
@@ -54,7 +29,7 @@ inline Matrix Matrix::operator*(float scalar) const {
     return out;
 }
 
-inline Matrix Matrix::operator/(float scalar) const {
+Matrix Matrix::operator/(float scalar) const {
     Matrix out(rows, cols);
     for(size_t i = 0; i < rows; i++) {
         for(size_t j = 0; j < cols; j++) {
@@ -63,7 +38,7 @@ inline Matrix Matrix::operator/(float scalar) const {
     }
     return out;
 }
-inline Matrix Matrix::operator-(const Matrix &m) const {
+Matrix Matrix::operator-(const Matrix &m) const {
     if(cols != m.cols || rows != m.rows) {
         throw std::invalid_argument("Invalid matrix dimensions");
     }
@@ -76,7 +51,7 @@ inline Matrix Matrix::operator-(const Matrix &m) const {
     return out;
 }
 
-inline Matrix Matrix::operator+(const Matrix &m) const {
+Matrix Matrix::operator+(const Matrix &m) const {
     if(cols != m.cols || rows != m.rows) {
         throw std::invalid_argument("Invalid matrix dimensions");
     }
@@ -89,7 +64,7 @@ inline Matrix Matrix::operator+(const Matrix &m) const {
     return out;
 }
 
-inline Matrix relu(const Matrix &m) {
+Matrix relu(const Matrix &m) {
     Matrix out(m.rows, m.cols);
 
     for(size_t i = 0; i < m.rows; i++) {
@@ -100,7 +75,7 @@ inline Matrix relu(const Matrix &m) {
     return out;
 }
 
-inline Matrix transpose(const Matrix &m) {
+Matrix transpose(const Matrix &m) {
     Matrix out(m.cols, m.rows);
     for(size_t i = 0; i < m.rows; i++) {
         for(size_t j = 0; j < m.cols; j++) {
@@ -110,7 +85,7 @@ inline Matrix transpose(const Matrix &m) {
     return out;
 }
 
-inline Matrix broadcast_cols(const Matrix &m, int new_cols) {
+Matrix broadcast_cols(const Matrix &m, int new_cols) {
     if(m.cols != 1) {
         throw std::invalid_argument("Broadcasting matrix columns is supported on only Ax1 matrices");
     }
@@ -124,7 +99,7 @@ inline Matrix broadcast_cols(const Matrix &m, int new_cols) {
     return out;
 }
 
-inline Matrix broadcast_rows(const Matrix &m, int new_rows) {
+Matrix broadcast_rows(const Matrix &m, int new_rows) {
     if(m.rows != 1) {
         throw std::invalid_argument("Broadcasting matrix rows is supported on only 1xA matrices");
     }
@@ -135,6 +110,5 @@ inline Matrix broadcast_rows(const Matrix &m, int new_rows) {
             out[i][j] = m_r[j];
         }
     }
-    return out;   
+    return out;
 }
-#endif
