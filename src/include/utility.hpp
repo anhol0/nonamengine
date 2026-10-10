@@ -2,5 +2,5 @@
 
 #include "matrix.hpp"
 
-void print_matrix(const Matrix &m);
+void print_matrix(const Tensor &m);
 float randf();

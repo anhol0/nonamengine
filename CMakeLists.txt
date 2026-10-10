@@ -7,6 +7,7 @@ project(${PN}
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(nn
@@ -32,5 +33,5 @@ target_link_libraries(${PN} PRIVATE
 if (MSVC)
     target_compile_options(${PN} PRIVATE /W4 /WX)
 else()
-    target_compile_options(${PN} PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    target_compile_options(${PN} PRIVATE -Wall -Wextra -Wpedantic -Werror -g)
 endif()

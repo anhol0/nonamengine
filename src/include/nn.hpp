@@ -1,48 +1,50 @@
 #pragma once
 
 #include "matrix.hpp"
+#include <optional>
 
 class Layer {
 public:
-    virtual Matrix forward(const Matrix &input) = 0;
-    virtual Matrix backward(const Matrix &grad_output) = 0;
+    virtual Tensor forward(const Tensor &input) = 0;
+    virtual Tensor backward(const Tensor &grad_output) = 0;
     virtual void update(float lr) = 0;
     virtual ~Layer() = default;
 };
 
+// Base Dense layer
 class Dense : public Layer {
 public:
-    Matrix weights, biases;
-    Matrix grad_weights, grad_biases;
-    Matrix input_cache;
+    Tensor weights, biases;
+    std::optional<Tensor> grad_weights, grad_biases;
+    std::optional<Tensor> input_cache;
 
     Dense(size_t in_features, size_t out_features);
-    Matrix forward(const Matrix &input) override;
-    Matrix backward(const Matrix &grad_output) override;
+    Tensor forward(const Tensor &input) override;
+    Tensor backward(const Tensor &grad_output) override;
     void update(float lr) override;
 };
 
 // ReLU class
-class ReLU : public Layer{
+class ReLU : public Layer {
 public:
-    Matrix cache;
-    Matrix forward(const Matrix &input) override;
-    Matrix backward(const Matrix &grad_output) override;
+    std::optional<Tensor> cache;
+    Tensor forward(const Tensor &input) override;
+    Tensor backward(const Tensor &grad_output) override;
     void update(float lr) override {(void)lr;}
 };
 
 // Tanh class
 class Tanh : public Layer {
 public:
-    Matrix cache;
-    Matrix forward(const Matrix &input) override;
-    Matrix backward(const Matrix &grad_output) override;
+    std::optional<Tensor> cache;
+    Tensor forward(const Tensor &input) override;
+    Tensor backward(const Tensor &grad_output) override;
     void update(float lr) override {(void)lr;}
 };
 
 // MSE loss class for error calculation
 class MSELoss {
 public:
-    float forward(const Matrix &pred, const Matrix &target);
-    Matrix backward(const Matrix &pred, const Matrix &target);
+    float forward(const Tensor &pred, const Tensor &target);
+    Tensor backward(const Tensor &pred, const Tensor &target);
 };

@@ -13,9 +13,10 @@ private:
 public:
     template<typename T, typename... Args>
     void add_layer(Args&& ...args);
-    Matrix forward(const Matrix &m);
-    void backward(const Matrix &grad);
+    Tensor forward(const Tensor &m);
+    void backward(const Tensor &grad);
     void update(float lr);
+
 };
 
 template<typename T, typename... Args>
