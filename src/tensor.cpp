@@ -1,4 +1,4 @@
-#include "include/matrix.hpp"
+#include "include/tensor.hpp"
 #include "exceptions.hpp"
 #include <algorithm>
 #include <concepts>
@@ -89,7 +89,7 @@ Tensor tensor_operations::matmul(const Tensor &a, const Tensor &b) {
     require_rank<2>(a, b);
     if(a.shape()[1] != b.shape()[0]) {
         throw std::invalid_argument(
-            "Tensor dimensions are incompatible for matrix multiplication");
+            "Tensor dimensions are incompatible for tensor multiplication");
     }
 
     Tensor result({a.shape()[0], b.shape()[1]});

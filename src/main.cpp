@@ -1,4 +1,4 @@
-#include "include/matrix.hpp"
+#include "include/tensor.hpp"
 #include "include/nn.hpp"
 #include "include/model.hpp"
 #include "include/utility.hpp"
@@ -35,7 +35,7 @@ int main() {
     }
 
     for(int i = 0; i < ITERATIONS; i++) {
-        // Matrix of predictions
+        // tensor of predictions
         Tensor out = model.forward(x);
 
         // Loss gradient

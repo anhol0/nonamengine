@@ -1,7 +1,7 @@
 #pragma once
 
 #include "nn.hpp"
-#include "matrix.hpp"
+#include "tensor.hpp"
 
 #include <memory>
 #include <utility>

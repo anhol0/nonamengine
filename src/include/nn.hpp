@@ -1,6 +1,6 @@
 #pragma once
 
-#include "matrix.hpp"
+#include "tensor.hpp"
 #include <optional>
 
 class Layer {

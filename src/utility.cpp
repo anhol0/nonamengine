@@ -6,7 +6,7 @@
 #include <cmath>
 #include <random>
 
-void print_matrix(const Tensor &m) {
+void print_tensor(const Tensor &m) {
     if(m.rank() != 2)
         throw RequiredRankException(2);
 

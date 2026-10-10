@@ -1,6 +1,6 @@
 #pragma once
 
-#include "matrix.hpp"
+#include "tensor.hpp"
 
-void print_matrix(const Tensor &m);
+void print_tensor(const Tensor &m);
 float randf();
