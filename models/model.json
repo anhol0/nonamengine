@@ -1,0 +1,66 @@
+{
+  "format": "nonamengine",
+  "layers": [
+    {
+      "biases": "layers.0.biases",
+      "input_size": 2,
+      "output_size": 32,
+      "type": "dense",
+      "weights": "layers.0.weights"
+    },
+    {
+      "type": "relu"
+    },
+    {
+      "biases": "layers.2.biases",
+      "input_size": 32,
+      "output_size": 1,
+      "type": "dense",
+      "weights": "layers.2.weights"
+    }
+  ],
+  "tensors": {
+    "layers.0.biases": {
+      "dtype": "float32",
+      "offset": 256,
+      "shape": [
+        32,
+        1
+      ],
+      "size": 128
+    },
+    "layers.0.weights": {
+      "dtype": "float32",
+      "offset": 0,
+      "shape": [
+        32,
+        2
+      ],
+      "size": 256
+    },
+    "layers.2.biases": {
+      "dtype": "float32",
+      "offset": 512,
+      "shape": [
+        1,
+        1
+      ],
+      "size": 4
+    },
+    "layers.2.weights": {
+      "dtype": "float32",
+      "offset": 384,
+      "shape": [
+        1,
+        32
+      ],
+      "size": 128
+    }
+  },
+  "version": 1,
+  "weights": {
+    "byte_order": "little",
+    "file": "model.bin",
+    "size": 516
+  }
+}

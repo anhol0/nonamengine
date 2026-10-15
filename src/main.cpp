@@ -109,4 +109,6 @@ int main() {
               << absolute_error_sum / test_count << '\n';
     std::cout << "Maximum absolute error: "
               << maximum_absolute_error << '\n';
+
+    model.export_model("./", "model");
 }

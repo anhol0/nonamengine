@@ -1,13 +1,25 @@
 #pragma once
 
 #include "tensor.hpp"
+#include <nlohmann/json.hpp>
+#include <functional>
 #include <optional>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+using NamedTensor = std::pair<
+    std::string_view,
+    std::reference_wrapper<const Tensor>
+>;
 
 class Layer {
 public:
     virtual Tensor forward(const Tensor &input) = 0;
     virtual Tensor backward(const Tensor &grad_output) = 0;
     virtual void update(float lr) = 0;
+    virtual nlohmann::json export_json() const = 0;
+    virtual std::vector<NamedTensor> parameters() const { return {}; }
     virtual ~Layer() = default;
 };
 
@@ -22,6 +34,8 @@ public:
     Tensor forward(const Tensor &input) override;
     Tensor backward(const Tensor &grad_output) override;
     void update(float lr) override;
+    nlohmann::json export_json() const override;
+    std::vector<NamedTensor> parameters() const override;
 };
 
 // ReLU class
@@ -31,6 +45,7 @@ public:
     Tensor forward(const Tensor &input) override;
     Tensor backward(const Tensor &grad_output) override;
     void update(float lr) override {(void)lr;}
+    nlohmann::json export_json() const override;
 };
 
 // Tanh class
@@ -40,6 +55,7 @@ public:
     Tensor forward(const Tensor &input) override;
     Tensor backward(const Tensor &grad_output) override;
     void update(float lr) override {(void)lr;}
+    nlohmann::json export_json() const override;
 };
 
 // MSE loss class for error calculation

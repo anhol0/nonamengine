@@ -57,6 +57,23 @@ void Dense::update(float lr) {
     biases = biases - (*grad_biases * lr);
 }
 
+nlohmann::json Dense::export_json() const {
+    return {
+        {"type", "dense"},
+        {"input_size", weights.cols()},
+        {"output_size", weights.rows()},
+        {"weights", nullptr},
+        {"biases", nullptr},
+    };
+}
+
+std::vector<NamedTensor> Dense::parameters() const {
+    return {
+        {"weights", std::cref(weights)},
+        {"biases", std::cref(biases)},
+    };
+}
+
 
 Tensor ReLU::forward(const Tensor &input) {
     cache = input;
@@ -76,6 +93,11 @@ Tensor ReLU::backward(const Tensor &grad_output) {
     return grad;
 }
 
+nlohmann::json ReLU::export_json() const {
+    return {
+        {"type", "relu"},
+    };
+}
 
 Tensor Tanh::forward(const Tensor &input) {
     cache = input;
@@ -103,6 +125,12 @@ Tensor Tanh::backward(const Tensor &grad_output) {
         }
     }
     return grad;
+}
+
+nlohmann::json Tanh::export_json() const {
+    return {
+        {"type", "tanh"},
+    };
 }
 
 
