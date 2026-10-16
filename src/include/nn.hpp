@@ -31,6 +31,7 @@ public:
     std::optional<Tensor> input_cache;
 
     Dense(size_t in_features, size_t out_features);
+    Dense(Tensor initial_weights, Tensor initial_biases);
     Tensor forward(const Tensor &input) override;
     Tensor backward(const Tensor &grad_output) override;
     void update(float lr) override;

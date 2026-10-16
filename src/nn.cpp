@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <random>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 Dense::Dense(size_t in_features, size_t out_features):
@@ -21,6 +22,16 @@ Dense::Dense(size_t in_features, size_t out_features):
     });
 
     biases.fill(0.0f);
+}
+
+Dense::Dense(Tensor initial_weights, Tensor initial_biases) :
+    weights(std::move(initial_weights)),
+    biases(std::move(initial_biases))
+{
+    if(weights.rank() != 2 || biases.rank() != 2 ||
+       biases.rows() != weights.rows() || biases.cols() != 1) {
+        throw std::invalid_argument("Invalid Dense parameter shapes");
+    }
 }
 
 Tensor Dense::forward(const Tensor& input) {

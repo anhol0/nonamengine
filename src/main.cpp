@@ -2,56 +2,105 @@
 #include "include/nn.hpp"
 #include "include/model.hpp"
 #include "include/utility.hpp"
+#include <CLI/App.hpp>
+#include <CLI/Option.hpp>
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdlib>
 #include <iomanip>
 #include <iostream>
 #include <ostream>
 #include <utility>
+#include <CLI/CLI.hpp>
+#include <filesystem>
 
 #define ITERATIONS 20000
 
-int main() {
-    float lr = 0.1f;
-    Model model;
-    MSELoss loss;
-    float l;
-
-    model.add_layer<Dense>(2, 32);
-    model.add_layer<ReLU>();
-    model.add_layer<Dense>(32, 1);
-    size_t batch_size = 1000;
-    Tensor x({2,batch_size});
-    Tensor target({1,batch_size});
-
-    for(size_t k = 0; k < batch_size; k++) {
-        float a = randf() * 2.0f - 1.0f;
-        float b = randf() * 2.0f - 1.0f;
-
-        x.at(0, k) = a;
-        x.at(1, k) = b;
-        target.at(0, k) = a * b;
+namespace {
+    bool load_model(std::filesystem::path path, Model& model) {
+        if(!model.load(path))
+            return false;
+        return true;
     }
 
-    for(int i = 0; i < ITERATIONS; i++) {
-        // tensor of predictions
-        Tensor out = model.forward(x);
+    void train_model(Model& model) {
+        float lr = 0.1f;
+        MSELoss loss;
+        float l;
 
-        // Loss gradient
-        l = loss.forward(out, target);
-        Tensor delta = loss.backward(out, target);
+        model.add_layer<Dense>(2, 32);
+        model.add_layer<ReLU>();
+        model.add_layer<Dense>(32, 1);
+        size_t batch_size = 1000;
+        Tensor x({2,batch_size});
+        Tensor target({1,batch_size});
 
-       // Backpropagating
-        model.backward(delta);
+        for(size_t k = 0; k < batch_size; k++) {
+            float a = randf() * 2.0f - 1.0f;
+            float b = randf() * 2.0f - 1.0f;
 
-        // Updating weights and biases on all layers
-        model.update(lr);
-        if(i % 100 == 0) {
-            std::cout << "loss = " << l << "\n";
-            std::cout << ((float)i / (float)ITERATIONS) * 100.f << "%\n";
-            std::cout << "\033[H\033[J";
+            x.at(0, k) = a;
+            x.at(1, k) = b;
+            target.at(0, k) = a * b;
         }
+
+        for(int i = 0; i < ITERATIONS; i++) {
+            // tensor of predictions
+            Tensor out = model.forward(x);
+
+            // Loss gradient
+            l = loss.forward(out, target);
+            Tensor delta = loss.backward(out, target);
+
+           // Backpropagating
+            model.backward(delta);
+
+            // Updating weights and biases on all layers
+            model.update(lr);
+            if(i % 100 == 0) {
+                std::cout << "loss = " << l << "\n";
+                std::cout << ((float)i / (float)ITERATIONS) * 100.f << "%\n";
+                std::cout << "\033[H\033[J";
+            }
+        }
+    }
+}
+
+int main(int argc, char** argv) {
+
+    CLI::App app{"Neural network loader and trainer"};
+    argv = app.ensure_utf8(argv);
+
+    auto* load = app.add_subcommand("load", "load model from json description");
+    std::string model_path;
+    load->add_option("model", model_path, "path to model JSON representation")->required();
+
+
+    auto* train = app.add_subcommand("train", "train model from file");
+    std::string file_dir = "./";
+    std::string file_name;
+    train->add_option("-d, --dir", file_dir, "output file directory path");
+    train->add_option("-o, --output", file_name, "output file name")->required();
+
+    app.require_subcommand(1);
+
+    try {
+        app.parse(argc, argv);
+    } catch (const CLI::ParseError &e) {
+        return app.exit(e);
+    }
+
+    Model model;
+
+    if(*load) {
+        load_model(std::filesystem::path(model_path), model);
+    } else if(*train) {
+        train_model(model);
+        model.export_model(file_dir, file_name);
+    } else {
+        // Should be unreachable
+        return EXIT_FAILURE;
     }
 
     // Test the trained model on values covering the complete input range.
@@ -109,6 +158,4 @@ int main() {
               << absolute_error_sum / test_count << '\n';
     std::cout << "Maximum absolute error: "
               << maximum_absolute_error << '\n';
-
-    model.export_model("./", "model");
 }

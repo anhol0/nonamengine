@@ -60,7 +60,7 @@
   "version": 1,
   "weights": {
     "byte_order": "little",
-    "file": "model.bin",
+    "file": "multiplier.bin",
     "size": 516
   }
 }

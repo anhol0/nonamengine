@@ -25,6 +25,7 @@ public:
     Tensor forward(const Tensor &m);
     void backward(const Tensor &grad);
     void update(float lr);
+    bool load(const std::filesystem::path& description_file);
     bool export_model(
         const std::filesystem::path& dir_path,
         std::string_view name

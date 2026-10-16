@@ -93,6 +93,34 @@ int main() {
     valid &= require(fs::file_size(export_directory / "multiply.bin") == 516,
                      "Binary weights file has the wrong size");
 
+    Tensor input({2, 3});
+    input.at(0, 0) = 0.25f;
+    input.at(1, 0) = 0.11f;
+    input.at(0, 1) = -0.5f;
+    input.at(1, 1) = 0.75f;
+    input.at(0, 2) = 1.0f;
+    input.at(1, 2) = -1.0f;
+    const Tensor expected = model.forward(input);
+
+    Model loaded_model;
+    valid &= require(
+        loaded_model.load(export_directory / "multiply.json"),
+        "Could not load exported model"
+    );
+    if(valid) {
+        const Tensor actual = loaded_model.forward(input);
+        valid &= require(actual.shape().size() == expected.shape().size(),
+                         "Loaded model output rank differs");
+        valid &= require(actual.data().size() == expected.data().size(),
+                         "Loaded model output size differs");
+        if(actual.data().size() == expected.data().size()) {
+            for(std::size_t i = 0; i < actual.data().size(); ++i) {
+                valid &= require(actual.data()[i] == expected.data()[i],
+                                 "Loaded model output differs");
+            }
+        }
+    }
+
     fs::remove_all(export_directory);
     return valid ? 0 : 1;
 }
