@@ -44,6 +44,11 @@ else()
 endif()
 
 if(BUILD_TESTING)
+    add_executable(tensor_test tests/tensor_test.cpp)
+    target_link_libraries(tensor_test PRIVATE nn)
+    foreach(case construction arithmetic structural)
+        add_test(NAME tensor_${case} COMMAND tensor_test ${case})
+    endforeach()
     add_executable(model_export_test
         tests/model_export_test.cpp
     )

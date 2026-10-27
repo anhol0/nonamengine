@@ -34,7 +34,7 @@ namespace {
                 throw std::invalid_argument(
                     "Tensor dimensions are not broadcast-compatible");
             }
-            result[i] = std::max(a_dimension, b_dimension);
+            result[i] = a_dimension == 1 ? b_dimension : a_dimension;
         }
         return result;
     }
