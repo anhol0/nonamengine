@@ -94,10 +94,14 @@ int main(int argc, char** argv) {
     Model model;
 
     if(*load) {
-        load_model(std::filesystem::path(model_path), model);
+        if(!load_model(std::filesystem::path(model_path), model)) {
+            return EXIT_FAILURE;
+        }
     } else if(*train) {
         train_model(model);
-        model.export_model(file_dir, file_name);
+        if(!model.export_model(file_dir, file_name)) {
+            return EXIT_FAILURE;
+        }
     } else {
         // Should be unreachable
         return EXIT_FAILURE;

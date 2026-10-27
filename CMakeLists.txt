@@ -44,6 +44,13 @@ else()
 endif()
 
 if(BUILD_TESTING)
+    foreach(case help load missing arguments)
+        add_test(NAME cli_${case} COMMAND ${CMAKE_COMMAND}
+            -DPROGRAM=$<TARGET_FILE:nonamengine>
+            -DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
+            -DCASE=${case}
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_test.cmake)
+    endforeach()
     add_executable(tensor_test tests/tensor_test.cpp)
     target_link_libraries(tensor_test PRIVATE nn)
     foreach(case construction arithmetic structural)
