@@ -49,6 +49,11 @@ if(BUILD_TESTING)
     foreach(case construction arithmetic structural)
         add_test(NAME tensor_${case} COMMAND tensor_test ${case})
     endforeach()
+    add_executable(nn_test tests/nn_test.cpp)
+    target_link_libraries(nn_test PRIVATE nn)
+    foreach(case dense activations loss gradients training utilities)
+        add_test(NAME nn_${case} COMMAND nn_test ${case})
+    endforeach()
     add_executable(model_export_test
         tests/model_export_test.cpp
     )
