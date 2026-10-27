@@ -96,9 +96,7 @@ nlohmann::json parse_description(
         );
     }
 
-    nlohmann::json description;
-    input >> description;
-    return description;
+    return nlohmann::json::parse(input);
 }
 
 std::vector<std::uint64_t> parse_shape(const nlohmann::json& value) {

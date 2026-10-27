@@ -1,9 +1,9 @@
 #include "model.hpp"
 #include "nn.hpp"
+#include "test_support.hpp"
 
 #include <nlohmann/json.hpp>
 
-#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -23,10 +23,8 @@ bool require(bool condition, const char* message) {
 int main() {
     namespace fs = std::filesystem;
 
-    const auto unique_suffix =
-        std::chrono::steady_clock::now().time_since_epoch().count();
-    const fs::path export_directory = fs::temp_directory_path() /
-        ("nonamengine-export-test-" + std::to_string(unique_suffix));
+    TestDirectory directory;
+    const fs::path& export_directory = directory.path;
 
     Model model;
     model.add_layer<Dense>(2, 32);
@@ -121,6 +119,5 @@ int main() {
         }
     }
 
-    fs::remove_all(export_directory);
     return valid ? 0 : 1;
 }

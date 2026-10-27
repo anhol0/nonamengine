@@ -54,6 +54,11 @@ if(BUILD_TESTING)
     foreach(case dense activations loss gradients training utilities)
         add_test(NAME nn_${case} COMMAND nn_test ${case})
     endforeach()
+    add_executable(model_load_test tests/model_load_test.cpp)
+    target_link_libraries(model_load_test PRIVATE nn)
+    foreach(case loading malformed exporting)
+        add_test(NAME model_${case} COMMAND model_load_test ${case})
+    endforeach()
     add_executable(model_export_test
         tests/model_export_test.cpp
     )
