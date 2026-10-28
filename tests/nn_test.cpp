@@ -169,6 +169,33 @@ void utilities() {
     check(std::string(EqualRankException().what()).size() > 0, "Rank diagnostic");
 }
 
+void nonlinear_training() {
+    Model model;
+    model.add_layer<Dense>(
+        tensor({4, 2}, {0.4f, -0.7f, 0.8f, 0.2f, -0.3f, 0.6f, -0.5f, -0.4f}),
+        tensor({4, 1}, {0.1f, -0.2f, 0.3f, -0.1f}));
+    model.add_layer<Tanh>();
+    model.add_layer<Dense>(tensor({1, 4}, {0.4f, -0.2f, 0.3f, -0.5f}),
+                           tensor({1, 1}, {0}));
+    // XOR is not representable by a single affine layer.
+    const auto input = tensor({2, 4}, {-1, -1, 1, 1, -1, 1, -1, 1});
+    const auto target = tensor({1, 4}, {-1, 1, 1, -1});
+    MSELoss loss;
+    const float initial_loss = loss.forward(model.forward(input), target);
+    for(int step = 0; step < 3000; ++step) {
+        const auto prediction = model.forward(input);
+        const float current_loss = loss.forward(prediction, target);
+        check(std::isfinite(current_loss), "Nonlinear training diverged");
+        model.backward(loss.backward(prediction, target));
+        model.update(0.1f);
+    }
+    const auto prediction = model.forward(input);
+    const float final_loss = loss.forward(prediction, target);
+    check(final_loss < 0.001f && final_loss < initial_loss * 0.01f,
+          "Nonlinear model failed to converge: " + std::to_string(final_loss));
+    equal(prediction, target, 0.05f);
+}
+
 int main(int argc, char** argv) {
     return run_test([&] {
         check(argc == 2, "Expected case name");
@@ -178,6 +205,7 @@ int main(int argc, char** argv) {
         else if(name == "loss") loss();
         else if(name == "gradients") gradients();
         else if(name == "training") training();
+        else if(name == "nonlinear_training") nonlinear_training();
         else if(name == "utilities") utilities();
         else throw std::runtime_error("Unknown case");
     });
