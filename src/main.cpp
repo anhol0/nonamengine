@@ -15,8 +15,6 @@
 #include <CLI/CLI.hpp>
 #include <filesystem>
 
-#define ITERATIONS 20000
-
 namespace {
     bool load_model(std::filesystem::path path, Model& model) {
         if(!model.load(path))
@@ -24,7 +22,7 @@ namespace {
         return true;
     }
 
-    void train_model(Model& model) {
+    void train_model(Model& model, int iterations, std::size_t batch_size) {
         float lr = 0.1f;
         MSELoss loss;
         float l;
@@ -32,7 +30,6 @@ namespace {
         model.add_layer<Dense>(2, 32);
         model.add_layer<ReLU>();
         model.add_layer<Dense>(32, 1);
-        size_t batch_size = 1000;
         Tensor x({2,batch_size});
         Tensor target({1,batch_size});
 
@@ -45,7 +42,7 @@ namespace {
             target.at(0, k) = a * b;
         }
 
-        for(int i = 0; i < ITERATIONS; i++) {
+        for(int i = 0; i < iterations; i++) {
             // tensor of predictions
             Tensor out = model.forward(x);
 
@@ -60,7 +57,7 @@ namespace {
             model.update(lr);
             if(i % 100 == 0) {
                 std::cout << "loss = " << l << "\n";
-                std::cout << ((float)i / (float)ITERATIONS) * 100.f << "%\n";
+                std::cout << (static_cast<float>(i) / static_cast<float>(iterations)) * 100.f << "%\n";
                 std::cout << "\033[H\033[J";
             }
         }
@@ -77,11 +74,17 @@ int main(int argc, char** argv) {
     load->add_option("model", model_path, "path to model JSON representation")->required();
 
 
-    auto* train = app.add_subcommand("train", "train model from file");
+    auto* train = app.add_subcommand("train", "train the multiplication demo and export it");
     std::string file_dir = "./";
     std::string file_name;
+    int iterations = 20000;
+    int batch_size = 1000;
     train->add_option("-d, --dir", file_dir, "output file directory path");
     train->add_option("-o, --output", file_name, "output file name")->required();
+    train->add_option("--iterations", iterations, "number of training iterations")
+        ->check(CLI::PositiveNumber)->capture_default_str();
+    train->add_option("--batch-size", batch_size, "number of training examples")
+        ->check(CLI::PositiveNumber)->capture_default_str();
 
     app.require_subcommand(1);
 
@@ -98,7 +101,7 @@ int main(int argc, char** argv) {
             return EXIT_FAILURE;
         }
     } else if(*train) {
-        train_model(model);
+        train_model(model, iterations, static_cast<std::size_t>(batch_size));
         if(!model.export_model(file_dir, file_name)) {
             return EXIT_FAILURE;
         }

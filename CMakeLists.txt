@@ -44,13 +44,20 @@ else()
 endif()
 
 if(BUILD_TESTING)
-    foreach(case help load missing arguments)
+    foreach(case help load missing arguments iterations_zero iterations_negative
+                 batch-size_zero batch-size_negative)
         add_test(NAME cli_${case} COMMAND ${CMAKE_COMMAND}
             -DPROGRAM=$<TARGET_FILE:nonamengine>
             -DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
             -DCASE=${case}
             -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_test.cmake)
     endforeach()
+    add_test(NAME cli_training COMMAND ${CMAKE_COMMAND}
+        -DPROGRAM=$<TARGET_FILE:nonamengine>
+        -DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
+        -DBINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_training_test.cmake)
+    set_tests_properties(cli_training PROPERTIES TIMEOUT 100)
     add_executable(tensor_test tests/tensor_test.cpp)
     target_link_libraries(tensor_test PRIVATE nn)
     foreach(case construction arithmetic structural)
