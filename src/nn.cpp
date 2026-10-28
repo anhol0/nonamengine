@@ -128,8 +128,6 @@ nlohmann::json ReLU::export_json() const {
 
 Tensor Tanh::forward(const Tensor &input) {
     cache = input;
-    if(!cache)
-        throw std::logic_error("Tanh::Cache was not initialized");
 
     Tensor out({cache->rows(), cache->cols()});
     for(size_t i = 0; i < cache->rows(); i++) {
