@@ -1,4 +1,5 @@
 #include "include/model.hpp"
+#include "model_io.hpp"
 #include <array>
 #include <bit>
 #include <cstdint>
@@ -27,6 +28,9 @@ void write_float32_little_endian(std::ostream& output, float value) {
         static_cast<char>((bits >> 24U) & 0xffU),
     };
     output.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
+    if(!output) {
+        throw std::runtime_error("Could not write tensor data");
+    }
 }
 
 nlohmann::json tensor_shape(const Tensor& tensor) {
@@ -96,7 +100,7 @@ nlohmann::json parse_description(
         );
     }
 
-    return nlohmann::json::parse(input);
+    return model_io::read_description(input);
 }
 
 std::vector<std::uint64_t> parse_shape(const nlohmann::json& value) {
@@ -150,7 +154,7 @@ Tensor load_tensor(
     const nlohmann::json& tensors,
     const std::string& tensor_name,
     const std::vector<std::uint64_t>& expected_shape,
-    std::ifstream& weights_input,
+    std::istream& weights_input,
     std::uint64_t weights_size
 ) {
     const nlohmann::json& tensor = required_member(tensors, tensor_name);
@@ -179,14 +183,7 @@ Tensor load_tensor(
         }
         element_count *= extent;
     }
-    if(element_count >
-       std::numeric_limits<std::uint64_t>::max() / sizeof(float)) {
-        throw std::overflow_error(
-            "Byte size overflow for tensor: " + tensor_name
-        );
-    }
-
-    const std::uint64_t expected_size = element_count * sizeof(float);
+    const std::uint64_t expected_size = model_io::tensor_end_offset(element_count, 0);
     const std::uint64_t offset = required_unsigned(tensor, "offset");
     const std::uint64_t size = required_unsigned(tensor, "size");
     if(size != expected_size) {
@@ -199,12 +196,7 @@ Tensor load_tensor(
             "Tensor is outside the weights file: " + tensor_name
         );
     }
-    if(offset > static_cast<std::uint64_t>(
-            std::numeric_limits<std::streamoff>::max())) {
-        throw std::overflow_error(
-            "Tensor offset is too large: " + tensor_name
-        );
-    }
+    // The range check also bounds offset by the size measured with streamoff.
 
     weights_input.clear();
     weights_input.seekg(static_cast<std::streamoff>(offset), std::ios::beg);
@@ -223,7 +215,7 @@ Tensor load_tensor(
 
 std::vector<std::unique_ptr<Layer>> load_layers(
     const nlohmann::json& description,
-    std::ifstream& weights_input,
+    std::istream& weights_input,
     std::uint64_t weights_size
 ) {
     const nlohmann::json& layer_descriptions =
@@ -294,6 +286,117 @@ std::vector<std::unique_ptr<Layer>> load_layers(
 
 } // namespace
 
+nlohmann::json model_io::read_description(std::istream& input) {
+    if(input.bad()) {
+        throw std::runtime_error("Could not read model description");
+    }
+    // Read through istream so device errors are retained. The JSON library's
+    // direct stream adapter clears error flags when it finishes parsing.
+    std::string text;
+    std::array<char, 4096> buffer;
+    while(input.read(buffer.data(), static_cast<std::streamsize>(buffer.size())) ||
+          input.gcount() > 0) {
+        text.append(buffer.data(), static_cast<std::size_t>(input.gcount()));
+    }
+    if(input.bad() || !input.eof()) {
+        throw std::runtime_error("Could not read model description");
+    }
+    return nlohmann::json::parse(text);
+}
+
+std::vector<std::unique_ptr<Layer>> model_io::read_layers(
+    const nlohmann::json& description, std::istream& weights
+) {
+    if(required_string(description, "format") != "nonamengine") {
+        throw std::invalid_argument("Unsupported model format");
+    }
+    if(required_unsigned(description, "version") != 1) {
+        throw std::invalid_argument("Unsupported model version");
+    }
+    const auto& metadata = required_member(description, "weights");
+    if(required_string(metadata, "byte_order") != "little") {
+        throw std::invalid_argument("Unsupported weights byte order");
+    }
+    weights.seekg(0, std::ios::end);
+    if(!weights) {
+        throw std::runtime_error("Could not seek to end of weights file");
+    }
+    const auto end_position = weights.tellg();
+    if(end_position < 0) {
+        throw std::runtime_error("Could not determine weights file size");
+    }
+    const auto size = static_cast<std::uint64_t>(end_position);
+    if(required_unsigned(metadata, "size") != size) {
+        throw std::invalid_argument("Weights file size does not match its description");
+    }
+    return load_layers(description, weights, size);
+}
+
+std::uint64_t model_io::tensor_end_offset(std::uint64_t elements, std::uint64_t offset) {
+    if(elements > std::numeric_limits<std::uint64_t>::max() / sizeof(float)) {
+        throw std::overflow_error("Tensor byte size is too large");
+    }
+    const auto bytes = elements * sizeof(float);
+    if(offset > std::numeric_limits<std::uint64_t>::max() - bytes) {
+        throw std::overflow_error("Weights file is too large");
+    }
+    return offset + bytes;
+}
+
+nlohmann::json model_io::write_weights(
+    std::span<const std::unique_ptr<Layer>> layers, std::ostream& output,
+    std::string_view filename, std::uint32_t version
+) {
+    using Json = nlohmann::json;
+    Json json = {
+        {"format", "nonamengine"}, {"version", version},
+        {"layers", Json::array()}, {"tensors", Json::object()}
+    };
+    std::uint64_t offset = 0;
+    for(std::size_t i = 0; i < layers.size(); ++i) {
+        Json layer_json = layers[i]->export_json();
+        for(const auto& [parameter_name, reference] : layers[i]->parameters()) {
+            const Tensor& tensor = reference.get();
+            const auto end = tensor_end_offset(tensor.data().size(), offset);
+            const std::string tensor_name =
+                "layers." + std::to_string(i) + "." + std::string(parameter_name);
+            layer_json[std::string(parameter_name)] = tensor_name;
+            json["tensors"][tensor_name] = {
+                {"dtype", "float32"}, {"shape", tensor_shape(tensor)},
+                {"offset", offset}, {"size", end - offset}
+            };
+            for(const float value : tensor.data()) {
+                write_float32_little_endian(output, value);
+            }
+            offset = end;
+        }
+        json["layers"].push_back(std::move(layer_json));
+    }
+    output.flush();
+    if(!output) {
+        throw std::runtime_error("Could not flush weights data");
+    }
+    json["weights"] = {
+        {"file", filename}, {"byte_order", "little"}, {"size", offset}
+    };
+    return json;
+}
+
+void model_io::write_description(std::ostream& output, const nlohmann::json& description) {
+    output << description.dump(2) << '\n';
+    output.flush();
+    if(!output) {
+        throw std::runtime_error("Could not write model description");
+    }
+}
+
+void model_io::close_output(std::ofstream& output) {
+    output.close();
+    if(!output) {
+        throw std::runtime_error("Could not close model output file");
+    }
+}
+
 Tensor Model::forward(const Tensor &m) {
     Tensor pred = m;
     for(const auto &e: layers) {
@@ -321,18 +424,8 @@ bool Model::load(const std::filesystem::path& description_file) {
     try {
         const nlohmann::json description =
             parse_description(description_file);
-        if(required_string(description, "format") != "nonamengine") {
-            throw std::invalid_argument("Unsupported model format");
-        }
-        if(required_unsigned(description, "version") != 1) {
-            throw std::invalid_argument("Unsupported model version");
-        }
-
         const nlohmann::json& weights =
             required_member(description, "weights");
-        if(required_string(weights, "byte_order") != "little") {
-            throw std::invalid_argument("Unsupported weights byte order");
-        }
 
         fs::path weights_file(required_string(weights, "file"));
         if(weights_file.is_relative()) {
@@ -341,7 +434,7 @@ bool Model::load(const std::filesystem::path& description_file) {
 
         std::ifstream weights_input(
             weights_file,
-            std::ios::binary | std::ios::ate
+            std::ios::binary
         );
         if(!weights_input) {
             throw std::runtime_error(
@@ -349,22 +442,8 @@ bool Model::load(const std::filesystem::path& description_file) {
             );
         }
 
-        const std::streampos end_position = weights_input.tellg();
-        if(end_position < 0) {
-            throw std::runtime_error(
-                "Could not determine weights file size"
-            );
-        }
-        const std::uint64_t weights_size =
-            static_cast<std::uint64_t>(end_position);
-        if(required_unsigned(weights, "size") != weights_size) {
-            throw std::invalid_argument(
-                "Weights file size does not match its description"
-            );
-        }
-
         std::vector<std::unique_ptr<Layer>> loaded_layers =
-            load_layers(description, weights_input, weights_size);
+            model_io::read_layers(description, weights_input);
         layers = std::move(loaded_layers);
         return true;
     } catch(const std::exception& e) {
@@ -378,8 +457,6 @@ void Model::save_model(
     const std::filesystem::path& model_file,
     std::uint32_t version
 ) const {
-    namespace nl = nlohmann;
-
     std::ofstream weights_output(model_file, std::ios::binary);
     if(!weights_output) {
         throw std::runtime_error(
@@ -387,63 +464,10 @@ void Model::save_model(
         );
     }
 
-    nl::json json;
-    json["format"] = "nonamengine";
-    json["version"] = version;
-    json["layers"] = nl::json::array();
-    json["tensors"] = nl::json::object();
+    const auto json = model_io::write_weights(
+        layers, weights_output, model_file.filename().string(), version);
 
-    std::uint64_t offset = 0;
-    for(std::size_t i = 0; i < layers.size(); ++i) {
-        nl::json layer_json = layers[i]->export_json();
-
-        for(const auto& [parameter_name, tensor_reference]
-            : layers[i]->parameters()) {
-            const Tensor& tensor = tensor_reference.get();
-            const std::uint64_t element_count = tensor.data().size();
-            if(element_count >
-               std::numeric_limits<std::uint64_t>::max() / sizeof(float)) {
-                throw std::overflow_error("Tensor byte size is too large");
-            }
-
-            const std::uint64_t byte_size = element_count * sizeof(float);
-            if(offset > std::numeric_limits<std::uint64_t>::max() - byte_size) {
-                throw std::overflow_error("Weights file is too large");
-            }
-
-            const std::string tensor_name =
-                "layers." + std::to_string(i) + "." +
-                std::string(parameter_name);
-
-            layer_json[std::string(parameter_name)] = tensor_name;
-            json["tensors"][tensor_name] = {
-                {"dtype", "float32"},
-                {"shape", tensor_shape(tensor)},
-                {"offset", offset},
-                {"size", byte_size},
-            };
-
-            for(const float value : tensor.data()) {
-                write_float32_little_endian(weights_output, value);
-            }
-            offset += byte_size;
-        }
-
-        json["layers"].push_back(std::move(layer_json));
-    }
-
-    weights_output.close();
-    if(!weights_output) {
-        throw std::runtime_error(
-            "Could not write weights file: " + model_file.string()
-        );
-    }
-
-    json["weights"] = {
-        {"file", model_file.filename().string()},
-        {"byte_order", "little"},
-        {"size", offset},
-    };
+    model_io::close_output(weights_output);
 
     std::ofstream description_output(description_file);
     if(!description_output) {
@@ -451,13 +475,8 @@ void Model::save_model(
             "Could not open model description: " + description_file.string()
         );
     }
-    description_output << json.dump(2) << '\n';
-    description_output.close();
-    if(!description_output) {
-        throw std::runtime_error(
-            "Could not write model description: " + description_file.string()
-        );
-    }
+    model_io::write_description(description_output, json);
+    model_io::close_output(description_output);
 }
 
 bool Model::export_model(

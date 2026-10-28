@@ -73,6 +73,11 @@ if(BUILD_TESTING)
     foreach(case loading malformed exporting)
         add_test(NAME model_${case} COMMAND model_load_test ${case})
     endforeach()
+    add_executable(model_io_test tests/model_io_test.cpp)
+    target_link_libraries(model_io_test PRIVATE nn)
+    foreach(case reading writing offsets closing)
+        add_test(NAME model_io_${case} COMMAND model_io_test ${case})
+    endforeach()
     add_executable(model_export_test
         tests/model_export_test.cpp
     )
