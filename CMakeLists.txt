@@ -44,6 +44,14 @@ else()
 endif()
 
 if(BUILD_TESTING)
+    add_executable(benchmarking_test tests/benchmarking_test.cpp src/benchmarking.cpp)
+    target_include_directories(benchmarking_test PRIVATE src/include)
+    foreach(case result_contract clear empty single order batches names ownership
+                 instances growth timing durations end_without_start double_end
+                 nested_start active_retrieval)
+        add_test(NAME benchmarking_${case} COMMAND benchmarking_test ${case})
+        set_tests_properties(benchmarking_${case} PROPERTIES LABELS benchmarking TIMEOUT 10)
+    endforeach()
     foreach(case help load missing arguments iterations_zero iterations_negative
                  batch-size_zero batch-size_negative)
         add_test(NAME cli_${case} COMMAND ${CMAKE_COMMAND}
