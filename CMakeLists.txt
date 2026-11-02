@@ -6,6 +6,7 @@ project(${PN}
         LANGUAGES CXX)
 
 find_package(nlohmann_json 3.11 REQUIRED)
+find_package(CLI11 REQUIRED)
 include(CTest)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -37,6 +38,15 @@ target_link_libraries(${PN} PRIVATE
     nn
 )
 
+add_executable(nonamengine_benchmark benchmarks/main.cpp benchmarks/runner.cpp src/benchmarking.cpp)
+target_include_directories(nonamengine_benchmark PRIVATE src)
+target_link_libraries(nonamengine_benchmark PRIVATE nn CLI11::CLI11)
+# Keep the observer in its own compilation unit so results remain observable.
+set_target_properties(nonamengine_benchmark PROPERTIES INTERPROCEDURAL_OPTIMIZATION FALSE)
+target_compile_definitions(nonamengine_benchmark PRIVATE
+    NONAMENGINE_COMPILER="${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}"
+    NONAMENGINE_BUILD_TYPE="$<CONFIG>")
+
 if (MSVC)
     target_compile_options(${PN} PRIVATE /W4 /WX)
 else()
@@ -44,6 +54,18 @@ else()
 endif()
 
 if(BUILD_TESTING)
+    foreach(case help quick matmul training missing_filter zero_samples zero_iterations negative_warmup)
+        add_test(NAME benchmark_cli_${case} COMMAND ${CMAKE_COMMAND}
+            -DPROGRAM=$<TARGET_FILE:nonamengine_benchmark> -DCASE=${case}
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/benchmark_cli_test.cmake)
+        set_tests_properties(benchmark_cli_${case} PROPERTIES TIMEOUT 35)
+    endforeach()
+    add_executable(benchmark_runner_test tests/benchmark_runner_test.cpp
+        benchmarks/runner.cpp src/benchmarking.cpp)
+    target_include_directories(benchmark_runner_test PRIVATE src src/include)
+    foreach(case statistics validation repetitions exceptions throughput)
+        add_test(NAME benchmark_runner_${case} COMMAND benchmark_runner_test ${case})
+    endforeach()
     add_executable(benchmarking_test tests/benchmarking_test.cpp src/benchmarking.cpp)
     target_include_directories(benchmarking_test PRIVATE src/include)
     foreach(case result_contract clear empty single order batches names ownership
