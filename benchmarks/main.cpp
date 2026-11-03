@@ -173,7 +173,7 @@ int main(int argc, char** argv) {
     }
     try {
         benchmarking::validate(options);
-        std::cout << "# compiler: " << NONAMENGINE_COMPILER << '\n'
+        std::cerr << "# compiler: " << NONAMENGINE_COMPILER << '\n'
                   << "# build: " << NONAMENGINE_BUILD_TYPE << '\n'
                   << "# time: microseconds per tensor operation or full training step\n"
                   << "# scope: public API allocation and validation included\n"
