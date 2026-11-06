@@ -1,6 +1,50 @@
 #include "test_support.hpp"
 #include "../src/exceptions.hpp"
+#include <array>
 #include <limits>
+
+namespace {
+
+using BinaryOperation = Tensor (*)(const Tensor&, const Tensor&);
+const std::array<BinaryOperation, 8> binary_operations {
+    [](const Tensor& a, const Tensor& b) { return a + b; },
+    [](const Tensor& a, const Tensor& b) { return a - b; },
+    [](const Tensor& a, const Tensor& b) { return a * b; },
+    [](const Tensor& a, const Tensor& b) { return a / b; },
+    tensor_operations::add,
+    tensor_operations::subtract,
+    tensor_operations::multiply,
+    tensor_operations::divide,
+};
+
+void check_equal_shape_arithmetic(const std::vector<uint64_t>& shape) {
+    const auto a = tensor(shape, {-6, 0, 1.5f, 8, -3, 10});
+    const auto b = tensor(shape, {-2, 4, 0.5f, -4, 2, 5});
+    const auto original_a = a;
+    const auto original_b = b;
+    const std::array<Tensor, 4> expected {
+        tensor(shape, {-8, 4, 2, 4, -1, 15}),
+        tensor(shape, {-4, -4, 1, 12, -5, 5}),
+        tensor(shape, {12, 0, 0.75f, -32, -6, 50}),
+        tensor(shape, {3, 0, 3, -2, -1.5f, 2}),
+    };
+    for(std::size_t i = 0; i < binary_operations.size(); ++i) {
+        auto result = binary_operations[i](a, b);
+        equal(result, expected[i % expected.size()]);
+        result.data()[0] = 100;
+        equal(a, original_a);
+        equal(b, original_b);
+    }
+    // A tensor may appear on both sides without its storage being modified.
+    equal(a + a, tensor(shape, {-12, 0, 3, 16, -6, 20}));
+    equal(a - a, tensor(shape, {0, 0, 0, 0, 0, 0}));
+    equal(b * b, tensor(shape, {4, 16, 0.25f, 16, 4, 25}));
+    equal(b / b, tensor(shape, {1, 1, 1, 1, 1, 1}));
+    equal(a, original_a);
+    equal(b, original_b);
+}
+
+} // namespace
 
 void construction() {
     Tensor t({2, 3, 4});
@@ -73,6 +117,100 @@ void arithmetic() {
     values(a, {2, 4, 6, 8});
 }
 
+void equal_rank1() {
+    check_equal_shape_arithmetic({6});
+}
+
+void equal_rank2() {
+    check_equal_shape_arithmetic({2, 3});
+}
+
+void equal_rank3() {
+    check_equal_shape_arithmetic({1, 2, 3});
+    check_equal_shape_arithmetic({2, 1, 3});
+    check_equal_shape_arithmetic({2, 3, 1});
+}
+
+void equal_rank4() {
+    check_equal_shape_arithmetic({1, 2, 1, 3});
+    check_equal_shape_arithmetic({2, 1, 3, 1});
+    check_equal_shape_arithmetic({1, 1, 2, 3});
+}
+
+void scalar_and_singleton_arithmetic() {
+    // Rank zero holds one element; singleton axes must not collapse to rank zero.
+    for(const auto& shape : std::vector<std::vector<uint64_t>>{
+            {}, {1}, {1, 1}, {1, 1, 1}, {1, 1, 1, 1}}) {
+        const auto a = tensor(shape, {6});
+        const auto b = tensor(shape, {2});
+        const std::array<Tensor, 4> expected {
+            tensor(shape, {8}), tensor(shape, {4}), tensor(shape, {12}), tensor(shape, {3})
+        };
+        for(std::size_t i = 0; i < binary_operations.size(); ++i) {
+            auto result = binary_operations[i](a, b);
+            equal(result, expected[i % expected.size()]);
+            result.data()[0] = -100;
+            equal(a, tensor(shape, {6}));
+            equal(b, tensor(shape, {2}));
+        }
+    }
+}
+
+void empty_arithmetic() {
+    for(const auto& shape : std::vector<std::vector<uint64_t>>{
+            {0}, {0, 3}, {2, 0}, {0, 2, 3}, {2, 0, 3}, {2, 3, 0}, {1, 2, 0, 3}, {2, 0, 0}}) {
+        const Tensor a(shape), b(shape);
+        for(const auto operation : binary_operations) {
+            const auto result = operation(a, b);
+            equal(result, a);
+            check(result.data().empty(), "Empty operands must produce no data");
+        }
+    }
+}
+
+void arithmetic_tail() {
+    // An odd count above common SIMD widths exercises bulk-loop remainders.
+    for(const auto& shape : std::vector<std::vector<uint64_t>>{{17}, {1, 17, 1}}) {
+        Tensor a(shape), b(shape);
+        for(std::size_t i = 0; i < a.data().size(); ++i) {
+            a.data()[i] = static_cast<float>(static_cast<int>(i) - 8) * 0.25f;
+            b.data()[i] = 1.0f + static_cast<float>(i % 3) * 0.5f;
+        }
+        for(std::size_t operation = 0; operation < binary_operations.size(); ++operation) {
+            const auto result = binary_operations[operation](a, b);
+            check(std::ranges::equal(result.shape(), a.shape()), "Arithmetic must preserve the full shape");
+            check(result.data().size() == a.data().size(), "Arithmetic must preserve the element count");
+            for(std::size_t i = 0; i < a.data().size(); ++i) {
+                const float lhs = a.data()[i], rhs = b.data()[i];
+                const std::array<float, 4> expected {lhs + rhs, lhs - rhs, lhs * rhs, lhs / rhs};
+                near(result.data()[i], expected[operation % expected.size()]);
+            }
+        }
+    }
+}
+
+void arithmetic_shape_guards() {
+    for(const auto operation : binary_operations) {
+        // Equal element counts alone do not imply equal or compatible shapes.
+        throws<std::invalid_argument>([&] { (void)operation(Tensor({2, 3}), Tensor({3, 2})); });
+        throws<std::invalid_argument>([&] { (void)operation(Tensor({0, 2}), Tensor({0, 3})); });
+        throws<EqualRankException>([&] { (void)operation(Tensor({6}), Tensor({2, 3})); });
+        throws<EqualRankException>([&] { (void)operation(Tensor({0}), Tensor({0, 2})); });
+        throws<EqualRankException>([&] { (void)operation(tensor({}, {2}), tensor({1}, {3})); });
+    }
+    const auto a = tensor({1, 3}, {2, 4, 8});
+    const auto b = tensor({3, 1}, {1, 2, 4});
+    const std::array<Tensor, 4> expected {
+        tensor({3, 3}, {3, 5, 9, 4, 6, 10, 6, 8, 12}),
+        tensor({3, 3}, {1, 3, 7, 0, 2, 6, -2, 0, 4}),
+        tensor({3, 3}, {2, 4, 8, 4, 8, 16, 8, 16, 32}),
+        tensor({3, 3}, {2, 4, 8, 1, 2, 4, 0.5f, 1, 2}),
+    };
+    for(std::size_t i = 0; i < binary_operations.size(); ++i) {
+        equal(binary_operations[i](a, b), expected[i % expected.size()]);
+    }
+}
+
 void structural() {
     auto a = tensor({2, 3}, {1, 2, 3, 4, 5, 6});
     auto b = tensor({3, 2}, {7, 8, 9, 10, 11, 12});
@@ -95,6 +233,14 @@ int main(int argc, char** argv) {
         std::string name = argv[1];
         if(name == "construction") construction();
         else if(name == "arithmetic") arithmetic();
+        else if(name == "equal_rank1") equal_rank1();
+        else if(name == "equal_rank2") equal_rank2();
+        else if(name == "equal_rank3") equal_rank3();
+        else if(name == "equal_rank4") equal_rank4();
+        else if(name == "scalar_and_singleton") scalar_and_singleton_arithmetic();
+        else if(name == "empty_arithmetic") empty_arithmetic();
+        else if(name == "arithmetic_tail") arithmetic_tail();
+        else if(name == "shape_guards") arithmetic_shape_guards();
         else if(name == "structural") structural();
         else throw std::runtime_error("Unknown case");
     });
