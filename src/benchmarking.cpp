@@ -1,5 +1,4 @@
 #include "benchmarking.hpp"
-#include "exceptions.hpp"
 #include <chrono>
 #include <exception>
 #include <stdexcept>

@@ -24,3 +24,10 @@ public:
         return str.c_str();
     }
 };
+
+class TODO : public std::exception {
+public:
+    const char* what() const noexcept override {
+        return "NOT IMPLEMENTED";
+    }
+};
