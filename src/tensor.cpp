@@ -5,8 +5,10 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <ranges>
 #include <stdexcept>
 #include <utility>
+#include <vector>
 
 // Tensors
 
@@ -42,9 +44,22 @@ namespace {
     template<typename Operation>
     Tensor elementwise_binary(const Tensor& a, const Tensor& b,
                               Operation operation) {
+        if(std::ranges::equal(a.shape(), b.shape())) {
+            Tensor result(
+                std::vector<std::size_t>(
+                    a.shape().begin(),
+                    a.shape().end()
+                )
+            );
+            const std::size_t data_size = a.data().size();
+            for(std::size_t offset = 0; offset < data_size; ++offset) {
+                result.data()[offset] = operation(a.data()[offset], b.data()[offset]);
+            }
+            return result;
+        }
+
         const std::vector<std::size_t> result_shape = broadcast_shape(a, b);
         Tensor result(result_shape);
-
         for(std::size_t flat_index = 0;
             flat_index < result.data().size(); flat_index++) {
             std::size_t remaining = flat_index;
